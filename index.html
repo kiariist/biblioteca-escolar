@@ -127,8 +127,25 @@ button:disabled{opacity:.45}
   <h1>📚 Biblioteca Escolar</h1>
   <p>Organizá tus libros de manera sencilla</p>
 </header>
-
-<main>
+<section class="panel" id="acceso" style="max-width:850px;margin:18px auto;padding:20px">
+  <h2>Acceso a Biblioteca Escolar</h2>
+  <p>Ingresá con tu cuenta o creá una nueva.</p>
+  <input id="email" type="email" placeholder="Correo electrónico">
+  <input id="password" type="password" placeholder="Contraseña">
+  <button onclick="registrarse()">Crear cuenta</button>
+  <button class="secondary" onclick="iniciarSesion()">Iniciar sesión</button>
+  <p id="estadoAcceso"></p>
+  <div id="opcionesEscuela" style="display:none">
+    <h2>Tu escuela</h2>
+    <input id="nombreEscuela" placeholder="Nombre de tu escuela">
+    <button onclick="crearEscuela()">Crear escuela</button>
+    <p>O ingresá con un código de invitación:</p>
+    <input id="codigoEscuela" placeholder="Código de invitación">
+    <button onclick="unirseEscuela()">Unirme a una escuela</button>
+    <button class="secondary" onclick="cerrarSesion()">Cerrar sesión</button>
+  </div>
+</section>
+<main id="app" style="display:none">
 <section class="panel">
 <h2 id="tituloFormulario">Agregar un libro</h2>
 
@@ -515,6 +532,59 @@ const supabaseClient = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_KEY
 );
+</script>
+<script>
+async function registrarse() {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const { error } = await supabaseClient.auth.signUp({ email, password });
+  document.getElementById('estadoAcceso').textContent =
+    error ? error.message : 'Revisá tu correo para confirmar la cuenta.';
+}
+
+async function iniciarSesion() {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if (error) {
+    document.getElementById('estadoAcceso').textContent = error.message;
+    return;
+  }
+  await actualizarAcceso();
+}
+
+async function cerrarSesion() {
+  await supabaseClient.auth.signOut();
+  location.reload();
+}
+
+async function actualizarAcceso() {
+  const { data } = await supabaseClient.auth.getUser();
+  const conectado = !!data.user;
+  document.getElementById('acceso').style.display = conectado ? 'block' : 'block';
+  document.getElementById('opcionesEscuela').style.display = conectado ? 'block' : 'none';
+  document.getElementById('app').style.display = conectado ? 'block' : 'none';
+}
+
+async function crearEscuela() {
+  const nombre = document.getElementById('nombreEscuela').value.trim();
+  const { data, error } = await supabaseClient.rpc('crear_escuela', {
+    p_nombre: nombre
+  });
+  document.getElementById('estadoAcceso').textContent =
+    error ? error.message : 'Escuela creada. Código: ' + data[0].codigo_invitacion;
+}
+
+async function unirseEscuela() {
+  const codigo = document.getElementById('codigoEscuela').value.trim();
+  const { data, error } = await supabaseClient.rpc('unirse_a_escuela', {
+    p_codigo: codigo
+  });
+  document.getElementById('estadoAcceso').textContent =
+    error ? error.message : '¡Te uniste a ' + data[0].nombre + '!';
+}
+
+actualizarAcceso();
 </script>
 </body>
 </html>
